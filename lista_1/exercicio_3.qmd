@@ -133,4 +133,4 @@ turning.point.test(x)
 
 A sequência aleatória gerada rejeitou todas as hipóteses de aleatoriedade e não-tendência.
 
-Logo, concluímos que a sequência entregue pelo gerador proposto não é adequada para se gerar 5000 números.
+Logo, concluímos que a sequência entregue pelo gerador proposto não é adequada para se gerar 5000 números. Teste
