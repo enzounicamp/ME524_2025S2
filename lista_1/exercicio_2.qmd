@@ -1,0 +1,96 @@
+---
+format: pdf
+---
+### Exercício 2
+
+$$
+f(x) = ln(1+x) \Rightarrow f^{(i)}(x) = (-1)^{i+1}(i - 1)! \; (1 + x)^{-i}, \quad i = 1, 2, \dots
+$$
+
+Logo, a expansão de Taylor em torno do ponto $a$ é dada por:
+
+$$
+f(x) = \sum_{i = 0}^{\infty} \frac{f^{(i)}(a)}{i!}(x-a)^i = \sum_{i = 0}^{\infty} \frac{(-1)^{i+1}}{i} \left(\frac{x-a}{1+a}\right)^i
+$$ Se $a = 0$, temos $$
+f(x) = \sum_{i = 0}^{\infty} (-1)^{i+1} \frac{x^i}{i}
+$$ Criando a função:
+
+```{r}
+
+ln1 <- function(x, parada) {
+  result <- vector(mode = 'numeric', length = parada)
+  for(i in 1:parada) {
+    result[i] <- (-1)^(i + 1) * x^i/i
+  }
+  
+  return(sum(result))
+}
+
+ln1 <- Vectorize(ln1)
+```
+
+Testando:
+
+```{r}
+library(tidyr)
+library(purrr)
+library(knitr)
+
+parada <- c(1, 5, 10, 50, 100, 1000)
+x <- c(0, 0.1, 0.5, 1, 10, 100, 1000)
+
+argumentos <- expand_grid(x, parada)
+
+resultados <-
+  matrix(
+    data = c(
+      argumentos$x,
+      argumentos$parada,
+      map2_dbl(
+        argumentos$x,
+        argumentos$parada,
+        ln1
+      ),
+      map_dbl(
+        argumentos$x,
+        ~ log(.x + 1)
+      ),
+      map_dbl(
+        argumentos$x,
+        log1p
+      )
+    ),
+    nrow = nrow(argumentos)
+  )
+
+resultados <-
+  cbind(
+    resultados,
+    abs(resultados[, 3] - resultados[, 4]),
+    abs(resultados[, 3] - resultados[, 5])
+  )
+
+resultados <-
+  cbind(
+    resultados,
+    resultados[, 6] / abs(resultados[, 4]),
+    resultados[, 7] / abs(resultados[, 5])
+  )
+
+colnames(resultados) <- 
+  c(
+    'x',
+    'parada',
+    'ln1',
+    'log(x+1)',
+    'log1p',
+    '|ln1 - log(x+1)|',
+    '|ln1 - log1p|',
+    '|ln1 - log(x+1)| / |log(x+1)|',
+    '|ln1 - log1p| / |log1p|'
+  )
+
+kable(resultados)
+```
+
+Claramente, o algorítmo não funciona para x \> 1.

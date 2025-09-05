@@ -1,0 +1,11 @@
+project:
+  title: "Listas"
+  execute-dir: project
+  output-dir: 'output'
+
+execute: 
+  warning: false
+  
+lang: pt
+
+
