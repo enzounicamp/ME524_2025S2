@@ -93,4 +93,6 @@ colnames(resultados) <-
 kable(resultados)
 ```
 
-Claramente, o algorítmo não funciona para x \> 1.
+Claramente, o algorítmo não funciona para x \> 1, pois fica muito distante de $a = 0$.
+
+Falta fazer o desempenho de cada função

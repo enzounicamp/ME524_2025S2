@@ -1,0 +1,136 @@
+---
+format: pdf
+---
+
+### Exercício 3
+
+Nesse exercício, temos um gerador do tipo shift-register dado por $x_i = (x_{i-3} + x_{i-2} + x_{i-1}) \bmod 20$. Criando a função:
+
+```{r}
+
+rand_num <- function(semente, n, mod) {
+  
+  resultado <- c(
+    semente,
+    vector(mode = 'integer', length = n)
+  )
+  
+  for(i in (length(semente) + 1):(n + length(semente))) {
+    resultado[i] <- sum(resultado[(i-length(semente)):(i-1)]) %% mod
+  }
+  
+  return(resultado)
+}
+```
+
+Gerando os números pseudo-aleatórios:
+
+```{r}
+
+x <- rand_num(c(1, 8, 13), 5000, 20)
+
+```
+
+Em uma primeira inspeção visual, foi observado que esse gerador possui um período de 248:
+
+```{r}
+
+x[1:20]
+x[249:268]
+
+```
+
+Vamos avaliar o comportamento do gerador:
+
+```{r}
+#| label: fig-x-248
+#| fig-cap: 'Número gerado x Ordem (1 a 248)'
+
+library(ggplot2)
+theme_set(theme_bw())
+
+ggplot(
+  data.frame(x = x[1:248], ordem = seq_along(x[1:248])),
+  aes(x = ordem, y = x)) +
+  geom_point() +
+  geom_line()
+
+```
+
+```{r}
+#| label: fig-x-all
+#| fig-cap: 'Número gerado x Ordem (1 a 5000)'
+
+ggplot(
+  data.frame(x = x, ordem = seq_along(x)),
+  aes(x = ordem, y = x)) +
+  geom_point(alpha = 0.3) + 
+  geom_line(alpha = 0.5)
+
+```
+
+```{r}
+#| label: fig-uniform
+#| fig-cap: 'Número gerado x Ordem gerados por runif()'
+
+u <- runif(5000, max = 19)
+
+ggplot(
+  data.frame(x = u, ordem = seq_along(u)),
+  aes(x = ordem, y = x)) +
+  geom_point(alpha = 0.3) + 
+  geom_line(alpha = 0.5)
+
+```
+
+```{r}
+#| label: fig-acf
+#| fig-cap: 'ACF'
+
+x.acf <- acf(x, lag.max = 500)
+
+plot(x.acf)
+
+```
+
+```{r}
+#| label: fig-disp
+#| fig-cap: 'Gráfico de dispesão dos pares consecutivos'
+
+ggplot(
+  data.frame(x1 = x[1:4999], x2 = x[2:5000]),
+  aes(x = x1, y = x2)
+) +
+  geom_point(alpha = 0.01)
+
+
+```
+
+```{r}
+#| label: fig-3d
+#| fig-cap: 'Gráfico de dispesão dos pares consecutivos'
+
+
+```
+
+A @fig-x-248 nos mostra que os primeiros 248 dígitos da sequência parecem aleatórios; entretanto, ao vermos a sequência completa, dada pela @fig-x-all, notamos que esse não é o caso: há um claro padrão de repetição. Para podermos compararmos, a @fig-uniform nos informa como seria esse mesmo gráfico para os pontos gerados pela função `runif()` do R.
+
+A @fig-acf indica uma grande autocorrelação nos pontos múltiplos de 249 (`r max(x.acf$acf[-1])`).
+
+Por fim, @fig-disp evidencia padrões na dispesão dos pares consecutivos.
+
+```{r}
+
+library(randtests)
+bartels.rank.test(x)
+cox.stuart.test(x) 
+difference.sign.test(x)
+rank.test(x) 
+runs.test(x) 
+turning.point.test(x)
+
+```
+
+A sequência aleatória gerada rejeitou todas as hipóteses de aleatoriedade e não-tendência.
+
+Logo, concluímos que a sequência entregue pelo gerador proposto não é adequada para se gerar 5000 números.

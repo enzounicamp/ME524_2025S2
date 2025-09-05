@@ -3,8 +3,10 @@ project:
   execute-dir: project
   output-dir: 'output'
 
-execute: 
+execute:
   warning: false
+  engine: knitr
+  format: pdf
   
 lang: pt
 
