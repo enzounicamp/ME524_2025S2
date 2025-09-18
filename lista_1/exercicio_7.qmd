@@ -1,0 +1,101 @@
+---
+format: pdf
+---
+
+## Exercício 7
+
+### 7.d)
+
+```{r}
+library(rmutil)
+library(ggplot2)
+library(dplyr)
+```
+
+
+```{r}
+dbetabin <- function(x, m, a, b) {
+  if(!(x %in% 0:m)) return(0)
+  return(choose(m, x) * beta(x+a, m-x+b) / beta(a, b))
+}
+
+rbetabin_est <- function(n, m, a, b) {
+  beta_vec <- rbeta(n, shape1 = a, shape2 = b)
+  result <- sapply(beta_vec, function(p) {
+    rbinom(1, m, p)
+  })
+  
+  return(result)
+}
+
+rbetabin_mti <- function(n, m, a, b) {
+  unif_vec <- runif(n)
+  
+  result <- integer(n)
+  
+  for(i in seq_along(unif_vec)) {
+    p <- 0
+    
+    for(x in 0:m) {
+      p <- p + dbetabin(x, m, a, b)
+      if(unif_vec[i] <= p) result[i] <- x
+    }
+  }
+  
+  return(result)
+}
+
+rbetabin_rej <- function(n, m, a, b) {
+  result <- integer(n)
+  
+  C <- max(sapply(0:m, dbetabin, m = m, a = a, b = b)) # usando a densidade unif discreta como g
+  
+  divisor <- C /(m + 1)
+  
+  # não precisamos simular 
+  
+  for(i in seq_along(result)) {
+    u <- runif(1)
+    y <- sample(0:m, 1)
+    while(u > dbetabin(y, m, a, b)/divisor) y <- sample(0:m, 1)
+    result[i] <- y
+  }
+  
+  return(result)
+}
+```
+
+```{r}
+
+n <- 5000
+m <- 5
+a <- 2
+b <- 3
+
+DADOS <-
+  rbind(
+    data.frame(
+      Método = 'Est',
+      Valor = rbetabin_est(n, m, a, b)
+    ),
+    data.frame(
+      Método = 'MTI',
+      Valor = rbetabin_mti(n, m, a, b)
+    ),
+    data.frame(
+      Método = 'Rej',
+      Valor = rbetabin_rej(n, m, a, b)
+    ),
+    data.frame(
+      Método = 'R',
+      Valor = rbetabinom(n, size = m, m = a/(a+b), s = a+b)
+    )
+  )
+
+
+ggplot(DADOS, aes(x = Valor, fill = Método)) +
+  geom_bar(position = 'dodge')
+
+```
+
+
