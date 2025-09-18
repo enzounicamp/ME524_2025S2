@@ -59,8 +59,8 @@ df1 <- data.frame(
 )
 
 ggplot(df1, aes(sample = inv), ) +
-  geom_qq(distribution = stats::qnbinom, prob = 0.7, size = 5) +
-  geom_qq_line(distribution = stats::qnbinom, prob = 0.7, size = 5)
+  geom_qq(distribution = stats::qnbinom) +
+  geom_qq_line(distribution = stats::qnbinom)
 ```
 
 
