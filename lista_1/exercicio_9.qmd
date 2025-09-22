@@ -1,0 +1,59 @@
+
+```{r}
+library(tsallisqexp)
+library(tidyverse)
+```
+
+```{r}
+rtsal_mti <- function(n, lambda, q) {
+  unif_vec <- runif(n)
+  result <- integer(n)
+  
+  for(i in seq_along(unif_vec)) {
+    result[i] <- uniroot(function(x) {ptsal(x, kappa = lambda, q = q) - unif_vec[i]}, interval = c(0, 10000))$root
+  }
+  
+  return(result)
+}
+
+n <- 5000
+lambda <- 2
+q <- 1.2
+
+dados <-
+  rbind(
+    data.frame(
+      Método = 'MTI',
+      Valor = rtsal_mti(n, lambda, q)
+    ),
+    data.frame(
+      Método = 'R',
+      Valor = rtsal(n, q = q, kappa = lambda)
+    )
+  ) %>%
+  mutate(
+    Método = as.factor('Método')
+  )
+
+ggplot(
+  dados,
+  aes(x = Valor, color = Método)
+) +
+  geom_density()
+
+ggplot(
+  dados,
+  aes(x = Método, y = Valor)
+) +
+  geom_boxplot()
+
+ggplot(
+  dados,
+  aes(sample = Valor)
+) +
+  geom_qq(distribution = qtsal, dparams = list(kappa = lambda, q = q)) +
+  geom_qq_line(distribution = qtsal, dparams = list(kappa = lambda, q = q)) +
+  facet_wrap(vars(Método))
+```
+
+
