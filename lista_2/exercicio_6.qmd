@@ -1,0 +1,116 @@
+---
+format: pdf
+---
+
+As integrais exatas foram calculadas utilizando o site emathhelp.net.
+
+```{r}
+n <- 5000
+library(tidyverse)
+library(knitr)
+```
+
+
+### a)
+Seja $X \sim U(0, 1)$, $f_X(x) = 1$ e $g(x) = (1 - x^2)^{3/2}$. Assim, $\int_0^1(1 - x^2)^{3/2}dx = \int_0^1g(x)f_X(x)dx = E[g(X)]$. Pela LFrGN, $\frac{1}{n} \sum_1^n g(X_i) \xrightarrow{P} E[g(X_i)]$, onde $X_i \sim X$.
+```{r}
+g <- function(x) return((1-x^2)^(3/2))
+g <- Vectorize(g)
+
+mean(runif(n) %>% g())
+```
+$\int_0^1(1 - x^2)^{3/2}dx = \pi / 16 \approx 0.58904$
+
+
+### b)
+Seja $X \sim U(-2, 2)$, $f_X(x) = \frac{1}{4}$ e $g(x) = 4e^{x + x^2}$. Assim, $\int_{-2}^2 e^{x + x^2}dx = \int_{-2}^2g(x)f_X(x)dx = E[g(X)]$. Pela LFrGN, $\frac{1}{n} \sum_1^n g(X_i) \xrightarrow{P} E[g(X_i)]$, onde $X_i \sim X$.
+```{r}
+g <- function(x) return(4*exp(x+x^2)) %>% Vectorize()
+mean(runif(n, -2, 2) %>% g())
+```
+$\int_{-2}^2 e^{x + x^2}dx = 93.16275$
+
+### c)
+```{r}
+df1 <- data.frame(
+  Fun = c('$x^2 + 4$', '$\\sum x - 3$'),
+  Valor = c(1, 2)
+)
+
+kable(df1)
+```
+
+```{r}
+lista_g <- list(
+  a = expr((1-x^2)^(3/2)),
+  b = expr(4*exp(x+x^2)),
+  c = expr(pi / 3 * sin(x)),
+  d = expr(exp(-x) / (1 + x^2))
+)
+
+lista_f <- list(
+  a = expr(runif(n)),
+  b = expr(runif(n, -2, 2)),
+  c = expr(runif(n, 0, (3 / pi))),
+  d = expr(runif(n))
+)
+
+tabela_final <-
+  data.frame(
+    Integral = c(
+      '$\\int_0^1(1 - x^2)^{3/2}dx$',
+      '$\\int_{-2}^{2} e^{x + x^2} dx$',
+      '$\\int_{0}^{\\pi/3} \\sin(x) dx$',
+      '$\\int_{0}^{1} \\frac{e^{-x}}{1 + x^2}dx$',
+      '$\\int_{0}^{1} 1dx$',
+      '$\\int_{0}^{1} 1dx$'
+    ),
+    `Distr. X` = c(
+      '$U(0,1)$',
+      '$U(-2, 2)$',  
+      '$U(0, \\frac{\\pi}{3})$',
+      '$1$',
+      '$1$',
+      '$1$'
+    ),
+    f = c(
+      '$1$',
+      '$1/4$',
+      '$\\frac{3}{\\pi}$',
+      '$1$',
+      '$1$',
+      '$1$'
+    ),
+    g = c(
+      '$(1 - x^2)^{3/2}$',
+      '$4e^{x + x^2}$',
+      '$\\frac{\\pi}{3} \\sin(x)$',
+      '$1$',
+      '$1$',
+      '$1$'
+    ),
+    'Calculadora' = c(
+      0.589043,
+      93.16275,
+      0.5
+    )
+  )
+
+result <- numeric(6)
+
+for(i in seq_along(lista_g)) {
+  g <- function(x) return(eval(lista_g[[i]]))
+  g <- Vectorize(g)
+  
+  sim_f <- eval(lista_f[[i]])
+  result[i] <- mean(g(sim_f))
+}
+
+tabela_final[['Monte Carlo']] <- result
+
+kable(tabela_final)
+```
+
+
+$\sin(x)$
+

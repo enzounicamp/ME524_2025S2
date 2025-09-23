@@ -34,15 +34,19 @@ rbetabin_mti <- function(n, m, a, b) {
   result <- integer(n)
   
   for(i in seq_along(unif_vec)) {
-    p <- 0
+    p <- dbetabin(0, m, a, b)
+    x <- 0
     
-    for(x in 0:m) {
+    while(p < unif_vec[i]) {
+      x <- x + 1
       p <- p + dbetabin(x, m, a, b)
       if(unif_vec[i] <= p) {
         result[i] <- x
         break
       }
     }
+    
+    result[i] <- x
   }
   
   return(result)
@@ -50,16 +54,22 @@ rbetabin_mti <- function(n, m, a, b) {
 
 rbetabin_rej <- function(n, m, a, b) {
   result <- integer(n)
+
+  C <- max(sapply(
+    0:m,
+    function(x) {
+      dbetabin(x, m, a, b) * (m + 1)
+    }
+  )) # usando a densidade unif discreta como g
   
-  C <- max(sapply(0:m, dbetabin, m = m, a = a, b = b) * (1 + m)) # usando a densidade unif discreta como g
-  divisor <- C /(m + 1)
+  divisor <- C / (m + 1)
   
   # não precisamos simular 
   
   for(i in seq_along(result)) {
     u <- runif(1)
     y <- sample(0:m, 1)
-    while(u > dbetabin(y, m, a, b)/divisor) y <- sample(0:m, 1)
+    while(u > dbetabin(y, m, a, b) / divisor) y <- sample(0:m, 1)
     result[i] <- y
   }
   

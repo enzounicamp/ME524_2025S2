@@ -2,19 +2,22 @@
 format: pdf
 ---
 
-### Exercício 6
-Seja $Y = X - r$, onde $X \sim BN(r, p)$. Assim, $Y$ é a variável aleatória que conta o número de fracassos antes de $r$ sucessos.
+### *Exercício 6*
 
-#### Item a
-##### Algoritmo da Transformada Inversa
-Calcular a inversa de $F_Y$, $F_Y^{-1}$, não é simples por conta da combinatória envolvida. Assim, vamos usar o algoritmo construtivo: geraremos o valor $u \in [0, 1]$ aleatóriamente e testaremos todos os $y \in \{0, 1, \dots\}$ até que se encontre um $y_0$ tal que $F(y_0 - 1) < u \leq F(y_0)$, onde $F(y) = \sum_{i = 0}^y {y + r -1\choose r - 1} p^r (1-p)^y$
+*Seja* $Y = X - r$*, onde* $X \sim BN(r, p)$*. Assim,* $Y$ *é a variável aleatória que conta o número de fracassos antes de* $r$ *sucessos.*
 
+#### *Item a*
 
+##### *Algoritmo da Transformada Inversa*
 
-##### Algoritmo usando a distribuição geométrica
-Também podemos gerar uma amostra de uma binomial negativa utilizando a distribuição geométrica (com parâmetro $p$) da seguinte forma: geramos uma amostra aleatória de $r$ geométricas, e tomamos a soma delas como sendo uma amostra aleatória de uma binomial negativa.
+*Calcular a inversa de* $F_Y$*,* $F_Y^{-1}$*, não é simples por conta da combinatória envolvida. Assim, vamos usar o algoritmo construtivo: geraremos o valor* $u \in [0, 1]$ *aleatóriamente e testaremos todos os* $y \in \{0, 1, \dots\}$ *até que se encontre um* $y_0$ *tal que* $F(y_0 - 1) < u \leq F(y_0)$*, onde* $F(y) = \sum_{i = 0}^y {y + r -1\choose r - 1} p^r (1-p)^y$
 
-#### Item b
+##### *Algoritmo usando a distribuição geométrica*
+
+*Também podemos gerar uma amostra de uma binomial negativa utilizando a distribuição geométrica (com parâmetro* $p$*) da seguinte forma: geramos uma amostra aleatória de* $r$ *geométricas, e tomamos a soma delas como sendo uma amostra aleatória de uma binomial negativa.*
+
+#### *Item b*
+
 ```{r}
 gerar_bn_inv <- function(n, p, r) {
   u_vec <- runif(n)
@@ -44,10 +47,13 @@ gerar_bn_geo <- function(n, p, r) {
 }
 ```
 
-Como comparar: gráfico de barras, qqplot, boxplot
+*Como comparar: gráfico de barras, qqplot, boxplot*
 
 ```{r}
 library(ggplot2)
+library(dplyr)
+library(tidyr)
+set.seed(204256)
 bn_sim_inv <- gerar_bn_inv(5000, 0.7, 5)
 bn_sim_geo <- gerar_bn_geo(5000, 0.7, 5)
 bn_sim_r <- rnbinom(5000, 5, 0.7)
@@ -55,17 +61,51 @@ bn_sim_r <- rnbinom(5000, 5, 0.7)
 df1 <- data.frame(
   inv = bn_sim_inv,
   geo = bn_sim_geo,
-  r = bn_sim_r
-)
+  R = bn_sim_r
+) %>%
+  pivot_longer(
+    cols = all_of(names(.)),
+    names_to = 'metodo',
+    values_to = 'valor'
+  ) 
 
-ggplot(df1, aes(sample = inv), ) +
-  geom_qq(distribution = stats::qnbinom) +
-  geom_qq_line(distribution = stats::qnbinom)
+qnbinom1 <- function(p) {qnbinom(p, size = 5, prob = 0.7)}
+
+
+ggplot(
+  df1,
+  aes(sample = valor)
+) +
+  geom_qq(distribution = qnbinom1) +
+  geom_qq_line(distribution = qnbinom1) +
+  facet_wrap(vars(metodo))+
+  labs(
+    title = 'Método nativo do R',
+    x = 'Quantil teórico',
+    y = 'Quantil simulado'
+  )
+
+ggplot(df1, aes(x = metodo, y = valor)) +
+  geom_boxplot()
+
+
+df1_mean <-
+  df1 %>%
+  group_by(metodo, valor) %>%
+  summarise(prob = n() / 5000)
+
+df1_mean <-
+  rbind(
+    df1_mean,
+    data.frame(
+      metodo = 'exato',
+      valor = 0:max(df1_mean$valor),
+      prob = sapply(0:max(df1_mean$valor), function(x) return(dnbinom(x, 5, 0.7)))
+    )
+  )
+
+ggplot(df1_mean, aes(x = valor, y = prob, fill = metodo)) +
+  geom_col(position = 'dodge')
+
+
 ```
-
-
-```{r}
-
-```
-
-

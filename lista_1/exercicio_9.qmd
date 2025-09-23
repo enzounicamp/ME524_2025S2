@@ -32,14 +32,15 @@ dados <-
     )
   ) %>%
   mutate(
-    Método = as.factor('Método')
+    Método = as.factor(Método)
   )
 
 ggplot(
   dados,
   aes(x = Valor, color = Método)
 ) +
-  geom_density()
+  geom_density() +
+  geom_function(aes(color = 'Densidade'), fun = dtsal, args = list(q = q, kappa = lambda))
 
 ggplot(
   dados,
