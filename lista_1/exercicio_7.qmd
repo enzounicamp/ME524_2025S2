@@ -38,7 +38,10 @@ rbetabin_mti <- function(n, m, a, b) {
     
     for(x in 0:m) {
       p <- p + dbetabin(x, m, a, b)
-      if(unif_vec[i] <= p) result[i] <- x
+      if(unif_vec[i] <= p) {
+        result[i] <- x
+        break
+      }
     }
   }
   
@@ -48,8 +51,7 @@ rbetabin_mti <- function(n, m, a, b) {
 rbetabin_rej <- function(n, m, a, b) {
   result <- integer(n)
   
-  C <- max(sapply(0:m, dbetabin, m = m, a = a, b = b)) # usando a densidade unif discreta como g
-  
+  C <- max(sapply(0:m, dbetabin, m = m, a = a, b = b) * (1 + m)) # usando a densidade unif discreta como g
   divisor <- C /(m + 1)
   
   # não precisamos simular 
@@ -95,6 +97,17 @@ DADOS <-
 
 ggplot(DADOS, aes(x = Valor, fill = Método)) +
   geom_bar(position = 'dodge')
+
+ggplot(
+  data.frame(
+    x = 0:m,
+    y = sapply(0:m, dbetabin, m = m, a = a, b = b)
+  ),
+  aes(x = x, y = y)
+) +
+  geom_point() +
+  geom_line() +
+  geom_hline(yintercept = divisor)
 
 ```
 
