@@ -2,7 +2,7 @@
 format: pdf
 ---
 
-As integrais exatas foram calculadas utilizando o site emathhelp.net.
+As integrais exatas foram calculadas utilizando o site [emathhelp.net](emathhelp.net).
 
 ```{r}
 n <- 5000
@@ -10,119 +10,158 @@ library(tidyverse)
 library(knitr)
 ```
 
-
-### a)
 Seja $X \sim U(0, 1)$, $f_X(x) = 1$ e $g(x) = (1 - x^2)^{3/2}$. Assim, $\int_0^1(1 - x^2)^{3/2}dx = \int_0^1g(x)f_X(x)dx = E[g(X)]$. Pela LFrGN, $\frac{1}{n} \sum_1^n g(X_i) \xrightarrow{P} E[g(X_i)]$, onde $X_i \sim X$.
+
 ```{r}
-g <- function(x) return((1-x^2)^(3/2))
-g <- Vectorize(g)
 
-mean(runif(n) %>% g())
-```
-$\int_0^1(1 - x^2)^{3/2}dx = \pi / 16 \approx 0.58904$
-
-
-### b)
-Seja $X \sim U(-2, 2)$, $f_X(x) = \frac{1}{4}$ e $g(x) = 4e^{x + x^2}$. Assim, $\int_{-2}^2 e^{x + x^2}dx = \int_{-2}^2g(x)f_X(x)dx = E[g(X)]$. Pela LFrGN, $\frac{1}{n} \sum_1^n g(X_i) \xrightarrow{P} E[g(X_i)]$, onde $X_i \sim X$.
-```{r}
-g <- function(x) return(4*exp(x+x^2)) %>% Vectorize()
-mean(runif(n, -2, 2) %>% g())
-```
-$\int_{-2}^2 e^{x + x^2}dx = 93.16275$
-
-### c)
-```{r}
-df1 <- data.frame(
-  Fun = c('$x^2 + 4$', '$\\sum x - 3$'),
-  Valor = c(1, 2)
-)
-
-kable(df1)
+rexp_truncada <- function(n, rate = 1, lower = 0, upper = Inf) {
+  result <- numeric(5000)
+  
+  for(i in seq_along(result)) {
+    y <- rexp(rate)
+    while(y < lower | y > upper) y <- rexp(rate)
+    result[i] <- y
+  }
+  
+  return(result)
+}
 ```
 
 ```{r}
-lista_g <- list(
-  a = expr((1-x^2)^(3/2)),
-  b = expr(4*exp(x+x^2)),
-  c = expr(pi / 3 * sin(x)),
-  d = expr(exp(-x) / (1 + x^2)),
-  d1 = expr(1/(1+x^2) * pexp(1))
-)
-
-lista_f <- list(
-  a = expr(runif(n)),
-  b = expr(runif(n, -2, 2)),
-  c = expr(runif(n, 0, (3 / pi))),
-  d = expr(runif(n)),
-  d1 = expr()
-)
-
-tabela_final <-
+tabela1 <-
   data.frame(
     Integral = c(
       '$\\int_0^1(1 - x^2)^{3/2}dx$',
       '$\\int_{-2}^{2} e^{x + x^2} dx$',
       '$\\int_{0}^{\\pi/3} \\sin(x) dx$',
       '$\\int_{0}^{1} \\frac{e^{-x}}{1 + x^2}dx$',
-      '$\\int_{0}^{1} 1dx$',
-      '$\\int_{0}^{1} 1dx$'
+      '$\\int_{0}^{1} \\frac{e^{-x}}{1 + x^2}dx$'
     ),
-    `Distr. X` = c(
+    distx = c(
       '$U(0,1)$',
       '$U(-2, 2)$',  
       '$U(0, \\frac{\\pi}{3})$',
-      '$1$',
-      '$1$',
-      '$1$'
+      '$U(0,1)$',
+      '$exp_{(0, 1)}(1)$'
     ),
     f = c(
-      '$1$',
-      '$1/4$',
-      '$\\frac{3}{\\pi}$',
-      '$1$',
-      '$1$',
-      '$1$'
+      '$\\mathbb{1}_{(0, 1)}(x)$',
+      '$\\frac{1}{4} \\mathbb{1}_{(-2, 2)}(x)$',
+      '$\\frac{3}{\\pi} \\mathbb{1}_{(0, \\frac{\\pi}{3})}(x)$',
+      '$\\mathbb{1}_{(0, 1)}(x)$',
+      '$\\frac{e^{-x}}{F_{exp(1)}(1)} \\mathbb{1}_{(0, 1)}(x)$'
     ),
     g = c(
       '$(1 - x^2)^{3/2}$',
       '$4e^{x + x^2}$',
       '$\\frac{\\pi}{3} \\sin(x)$',
-      '$1$',
-      '$1$',
-      '$1$'
+      '$\\frac{e^{-x}}{1+x^2}$',
+      '$\\frac{F_{exp(1)}(1)}{1+x^2}$'
     ),
-    'Calculadora' = c(
+    Site = c(
       0.589043,
       93.16275,
-      0.5
+      0.5,
+      0.52479,
+      0.52479
     )
   )
 
-result <- numeric(6)
+lista_g <- list(
+  a = function(x) (1-x^2)^(3/2),
+  b = function(x) 4*exp(x+x^2),
+  c = function(x) pi / 3 * sin(x),
+  d1 = function(x) exp(-x) / (1 + x^2),
+  d2 = function(x)1/(1+x^2) * pexp(1)
+)
+
+lista_gerar_f <- list(
+  a = expr(runif(n)),
+  b = expr(runif(n, -2, 2)),
+  c = expr(runif(n, 0, (3 / pi))),
+  d1 = expr(runif(n)),
+  d2 = expr(rexp_truncada(n, upper = 1))
+)
+
+result <- numeric(5)
 
 for(i in seq_along(lista_g)) {
-  g <- function(x) return(eval(lista_g[[i]]))
+  g <- lista_g[[i]]
   g <- Vectorize(g)
   
-  sim_f <- eval(lista_f[[i]])
+  sim_f <- eval(lista_gerar_f[[i]])
   result[i] <- mean(g(sim_f))
 }
 
-tabela_final[['Monte Carlo']] <- result
+tabela1[['Monte Carlo']] <- result
 
-kable(tabela_final)
+kable(tabela1, col.names = c('Integral', 'Dist. X', 'f(x)', 'g(x)', 'Site', 'Monte Carlo'))
 ```
-
 
 ```{r}
-amostra <- numeric(5000)
-for(i in seq_along(amostra)) {
-  y <- rexp(1)
-  while(y > 1) y <- rexp(1)
-  amostra[i] <- y
-}
+x <- runif(n)
+y <- runif(n)
 
-mean(amostra %>% g())
+g <- function(x, y) exp(x + y)
+
+dados <- expand_grid(x, y) %>%
+  mutate(g = exp(x + y))
+
+sum(dados$g) / n^2
 ```
 
+```{r}
+tabela2 <- data.frame(
+  Integral = c(
+    '$\\int_{0}^{1} \\left(\\int_{0}^{1} e^{x+y}dx \\right) dy$',
+    '$\\int_{0}^{1/3} \\left(\\int_{0}^{2/3} x^3 y^2 (1- x - y)^6dx \\right) dy$'
+  ),
+  distxy = c(
+    '$U(0,1)$'
+  ),
+  disty = c(
+    '$U(0, 1)'
+  ),
+  fx = c(
+    '$\\mathbb{1}_{(0, 1)}(x)$'
+  ),
+  fy = c(
+    '$\\mathbb{1}_{(0, 1)}(y)$'
+  ),
+  g = c(
+    '$e^{x + y}$'
+  ),
+  externo = c(
+    2.952492
+  )
+)
 
+lista_gerar_fx <- list(
+  e = expr(runif(n))
+)
+
+lista_gerar_fy <- list(
+  e = expr(runif(n))
+)
+
+lista_g <- list(
+  e = function(x, y) exp(x + y)
+)
+
+result <- numeric(2)
+
+for(i in seq_along(lista_gerar_fx)) {
+  sim_x <- eval(lista_gerar_fx[[i]])
+  sim_y <- eval(lista_gerar_fy[[i]])
+  
+  
+  
+  fun_g <- lista_g[[i]]
+  fun_g <- Vectorize(fun_g)
+  
+  dados <- expand_grid(x = sim_x, y = sim_y) %>%
+    mutate(g = fun_g(x, y))
+  
+  result[i] <- sum(dados$g) / n^2
+}
+```
