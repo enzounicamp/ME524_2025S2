@@ -45,14 +45,16 @@ lista_g <- list(
   a = expr((1-x^2)^(3/2)),
   b = expr(4*exp(x+x^2)),
   c = expr(pi / 3 * sin(x)),
-  d = expr(exp(-x) / (1 + x^2))
+  d = expr(exp(-x) / (1 + x^2)),
+  d1 = expr(1/(1+x^2) * pexp(1))
 )
 
 lista_f <- list(
   a = expr(runif(n)),
   b = expr(runif(n, -2, 2)),
   c = expr(runif(n, 0, (3 / pi))),
-  d = expr(runif(n))
+  d = expr(runif(n)),
+  d1 = expr()
 )
 
 tabela_final <-
@@ -112,5 +114,15 @@ kable(tabela_final)
 ```
 
 
-$\sin(x)$
+```{r}
+amostra <- numeric(5000)
+for(i in seq_along(amostra)) {
+  y <- rexp(1)
+  while(y > 1) y <- rexp(1)
+  amostra[i] <- y
+}
+
+mean(amostra %>% g())
+```
+
 
