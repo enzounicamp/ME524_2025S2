@@ -1,0 +1,98 @@
+---
+
+---
+
+```{r}
+library(MASS)
+library(mvtnorm)
+library(tidyverse)
+library(maxLik)
+library(VGAM)
+library(knitr)
+```
+
+```{r}
+set_theme(theme_bw())
+```
+
+
+```{r}
+n <- 5000
+set.seed(204256)
+```
+
+
+
+# Exercício I
+
+## b)
+
+Para simular uma amostra aleatória de uma t de Student, podemos gerar uma normal multivariada e uma qui-quadrado univariada, independentes entre si e aleatórias, fazer a primeira vezes a raiz dos graus de liberdade da segunda, dividida pela raiz da segunda e somar o parâmetro de locação da primeira. Para uma amostra de tamanho $n$, basta repetir esse processo $n$ vezes.
+
+```{r}
+mu <- c(1, -2); df <- 4; sigma <- matrix(c(3, 1.3, 1.3, 1), ncol = 2)
+normal <- MASS::mvrnorm(n = n, mu = mu, Sigma = sigma)
+quiquadr <- rchisq(n = n, df = df)
+t_student <- normal/sqrt(quiquadr/df) + mu
+```
+
+```{r}
+t_student <- t_student %>% as.data.frame()
+xy <- expand(data.frame(x = seq(-40, 40, 0.1), y = seq(-40, 40, 0.1)), x, y)
+xy$z <- dmvt(x = xy[, 1:2] %>% as.matrix, delta = mu, sigma = sigma, df = df, log = F, type = 'shifted')
+ggplot() +
+  geom_density2d(aes(x = V1, y = V2, color = 'Simulado'), data = t_student) +
+  geom_contour(aes(x = x, y = y, z = z, color = 'Densidade'), data = xy)
+
+ggplot(
+  t_student,
+  aes(x = V1)
+  ) +
+  geom_density(aes(color = 'Simulado')) +
+  geom_function(aes(color = 't-Student'), fun = dt, args = list(df = df, ncp = 3))
+
+ggplot(
+  t_student,
+  aes(x = V2)
+  ) +
+  geom_density(aes(color = 'Simulado')) +
+  geom_function(aes(color = 't-Student'), fun = dt, args = list(df = df, ncp = 1))
+```
+
+# Questão II
+```{r}
+amostra <- rbisa(n = 100, shape = 3, scale = 0.8)
+start <- c(50, 50)
+logver <- function(x, a, b) {
+  if(a <= 0 || b <= 0) return(NA)
+  -length(x)*log(2*sqrt(2*pi)*a*b) - (2*a^2)^-1*(1/b * sum(x) + b*sum(1/amostra) - 2*length(x)) + sum(log(sqrt(b/x) + (b/x)^1.5))
+}
+logver_amostra <- function(param, neg = F) logver(amostra, param[1], param[2]) * (-1)^neg
+```
+```{r}
+nr <- maxLik(logLik = logver_amostra, start = start, method = 'NR')
+bfgs <- maxLik(logLik = logver_amostra, start = start, method = 'BFGS')
+lbfgsb <- optim(start, fn = logver_amostra, method = 'L-BFGS-B', lower = c(0.01, 0.01), neg = T)
+nm <- maxLik(logLik = logver_amostra, start = start, method = 'NM')
+```
+
+```{r}
+ggplot(amostra %>% as.data.frame %>% rename_with(function(x) 'Amostra'),
+       aes(x = Amostra)) +
+  geom_histogram(bins = 15, fill = 'red', alpha = 0.7, color = 'red')
+```
+
+
+```{r}
+#| label: tbl-q2-resultados
+#| tbl-cap: Resultado da otimização da função de log-verossimilhança para cada tipo de método de otimização.
+tribble(
+  ~Método, ~Estimativa, ~logverossimilhança, ~Número_iterações,
+  'NR', nr$estimate, nr$maximum, nr$iterations,
+  'BFGS', bfgs$estimate, bfgs$maximum, bfgs$iterations,
+  'L-BFGS-B', lbfgsb$par, -lbfgsb$value, lbfgsb$counts[1],
+  'NM', nm$estimate, nm$maximum, nm$iterations,
+) %>% kable()
+```
+Pela @tbl-q2-resultados, notamos que todos os métodos convergiram para os mesmos valores. O método NR foi o que convergiu com menos iterações, enquanto o NM, o que convergiu com mais. Além disso, o BFGS levou quase o dobro do número de iterações do L-BFGS-B. Dado o que aprendemos sobre a performce de cada um desses métodos, todos esses resultados são esperados.
+
