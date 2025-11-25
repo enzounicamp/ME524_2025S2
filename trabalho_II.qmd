@@ -1,4 +1,9 @@
 ---
+title: ME524 - Trabalho II
+date: 11/25/2025
+date-format: "DD/MM/YYYY"
+author: Enzo Putton Tortelli (204256)
+lang: pt
 format: 
     typst:
       papersize: a4
@@ -6,6 +11,7 @@ format:
         x: 3cm
 
 ---
+
 
 ```{r}
 #| include: false
@@ -32,7 +38,82 @@ set.seed(204256)
 
 
 
-# Exercício I
+# Questão I
+## b)
+
+Para simular uma amostra aleatória de uma t de Student multivariada, podemos gerar uma normal multivariada e uma qui-quadrado univariada, independentes entre si e aleatórias, fazer a primeira vezes a raiz dos graus de liberdade da segunda, dividida pela raiz da segunda e somar o parâmetro de locação da primeira. Para uma amostra de tamanho $n$, basta repetir esse processo $n$ vezes.
+
+## c)
+```{r}
+n <- 5000; mu <- c(1, -2); df <- 4; sigma <- matrix(c(3, 1.3, 1.3, 1), ncol = 2)
+normal <- MASS::mvrnorm(n = n, mu = mu, Sigma = sigma)
+quiquadr <- rchisq(n = n, df = df)
+t_student <- normal/sqrt(quiquadr/df) + mu
+```
+
+```{r}
+#| include: false
+t_student <- t_student %>% as.data.frame()
+xy <- expand(data.frame(x = seq(-40, 40, 0.1), y = seq(-40, 40, 0.1)), x, y)
+xy$z <- dmvt(x = xy[, 1:2] %>% as.matrix, delta = mu, sigma = sigma, df = df, log = F, type = 'shifted')
+
+```
+
+```{r}
+#| label: fig-density-tmulti
+#| fig-cap: Densidades da t-Student multivariada simulada e dada pela função dmvt
+#| echo: false
+ggplot() +
+  geom_density2d(aes(x = V1, y = V2, color = 'Simulado'), data = t_student) +
+  geom_contour(aes(x = x, y = y, z = z, color = 'Densidade'), data = xy)
+```
+
+## d)
+```{r}
+n <- 5000; mu <- c(-1, 2); df <- 40; sigma <- matrix(c(3, -1.3, -1.3, 1), ncol = 2)
+normal <- MASS::mvrnorm(n = n, mu = mu, Sigma = sigma)
+quiquadr <- rchisq(n = n, df = df)
+t_student <- normal/sqrt(quiquadr/df) + mu
+```
+
+```{r}
+#| include: false
+t_student <- t_student %>% as.data.frame()
+xy <- expand(data.frame(x = seq(-40, 40, 0.1), y = seq(-40, 40, 0.1)), x, y)
+xy$z <- dmvt(x = xy[, 1:2] %>% as.matrix, delta = mu, sigma = sigma, df = df, log = F, type = 'shifted')
+
+```
+
+```{r}
+#| label: fig-density-tmulti-qd
+#| fig-cap: Densidades da t-Student multivariada simulada e dada pela função dmvt
+#| echo: false
+ggplot() +
+  geom_density2d(aes(x = V1, y = V2, color = 'Simulado'), data = t_student) +
+  geom_contour(aes(x = x, y = y, z = z, color = 'Densidade'), data = xy)
+```
+Pelas @fig-density-tmulti e @fig-density-tmulti-qd, eu sei que a simulação está errada, mas não consegui arrumar. Dito isso, sei que com o aumento dos graus de liberdade, a t de Student multivariada converge para a normal multivariada.
+
+```{r}
+#| include: false
+ggplot(
+  t_student,
+  aes(x = V1)
+) +
+  geom_density(aes(color = 'Simulado')) +
+  geom_function(aes(color = 't-Student'), fun = dt, args = list(df = df, ncp = 3))
+
+ggplot(
+  t_student,
+  aes(x = V2)
+) +
+  geom_density(aes(color = 'Simulado')) +
+  geom_function(aes(color = 't-Student'), fun = dt, args = list(df = df, ncp = 1))
+```
+
+{{< pagebreak >}}
+
+# Questão II
 ## a)
 $$
 L(\alpha, \beta| \textbf{x}) = (2\sqrt{2\pi}\alpha \beta)^{-n} \exp\left\{-\frac{1}{2\alpha^2}[\sum_{i = 1}^n(\frac{x_i}{\beta} + \frac{\beta}{x_i}) -2n]\right\} \prod_{i =1}^n\left[\left(\frac{\beta}{x_i}\right)^{\frac{1}{2}} + \left(\frac{x_i}{\beta}\right)^{\frac{3}{2}}\right]
@@ -80,44 +161,6 @@ $$
 $$
 I(\alpha, \beta) \left[\begin{array}{cc} E\left[\frac{d^2l}{d\alpha^2}\right] & E\left[\frac{d^2l}{d\beta d \alpha}\right] \\ E\left[\frac{d^2l}{d\alpha d\beta}\right] & E\left[\frac{d^2l}{d\beta^2}\right] \end{array}\right]
 $$
-
-## b)
-
-Para simular uma amostra aleatória de uma t de Student, podemos gerar uma normal multivariada e uma qui-quadrado univariada, independentes entre si e aleatórias, fazer a primeira vezes a raiz dos graus de liberdade da segunda, dividida pela raiz da segunda e somar o parâmetro de locação da primeira. Para uma amostra de tamanho $n$, basta repetir esse processo $n$ vezes.
-
-```{r}
-n <- 5000; mu <- c(1, -2); df <- 4; sigma <- matrix(c(3, 1.3, 1.3, 1), ncol = 2)
-normal <- MASS::mvrnorm(n = n, mu = mu, Sigma = sigma)
-quiquadr <- rchisq(n = n, df = df)
-t_student <- normal/sqrt(quiquadr/df) + mu
-```
-
-```{r}
-t_student <- t_student %>% as.data.frame()
-xy <- expand(data.frame(x = seq(-40, 40, 0.1), y = seq(-40, 40, 0.1)), x, y)
-xy$z <- dmvt(x = xy[, 1:2] %>% as.matrix, delta = mu, sigma = sigma, df = df, log = F, type = 'shifted')
-ggplot() +
-  geom_density2d(aes(x = V1, y = V2, color = 'Simulado'), data = t_student) +
-  geom_contour(aes(x = x, y = y, z = z, color = 'Densidade'), data = xy)
-
-ggplot(
-  t_student,
-  aes(x = V1)
-) +
-  geom_density(aes(color = 'Simulado')) +
-  geom_function(aes(color = 't-Student'), fun = dt, args = list(df = df, ncp = 3))
-
-ggplot(
-  t_student,
-  aes(x = V2)
-) +
-  geom_density(aes(color = 'Simulado')) +
-  geom_function(aes(color = 't-Student'), fun = dt, args = list(df = df, ncp = 1))
-```
-
-p.s. eu sei que a simulação está errada, mas não faço ideia do porque.
-
-# Questão II
 ```{r}
 amostra <- rbisa(n = 100, shape = 3, scale = 0.8)
 start <- c(50, 50)
@@ -156,8 +199,9 @@ tribble(
   'NM', nm$estimate, nm$maximum, nm$iterations,
 ) %>% kable()
 ```
-Pela @tbl-q2-resultados, notamos que todos os métodos convergiram para os mesmos valores. O método NR foi o que convergiu com menos iterações, enquanto o NM, o que convergiu com mais. Além disso, o BFGS levou quase o dobro do número de iterações do L-BFGS-B. Dado o que aprendemos sobre a performce de cada um desses métodos, todos esses resultados são esperados. As funções utilizadas não deram *warning* em nenhum momento.
+Pela @tbl-q2-resultados, notamos que todos os métodos convergiram para os mesmos valores (duas casas decimais). O método NR foi o que convergiu com menos iterações, enquanto o NM, o que convergiu com mais. Além disso, o BFGS levou quase o dobro do número de iterações do L-BFGS-B. Dado o que aprendemos sobre a performce de cada um desses métodos, todos esses resultados são esperados. As funções utilizadas não deram *warning* em nenhum momento.
 
+{{< pagebreak >}}
 
 # Questão III
 
@@ -221,7 +265,7 @@ ggplot(
   geom_hline(yintercept = modelo$coefficients[1])
 ```
 
-Caracterização estimativa pontual de *Intercept* geradas por bootstrap paramétrico. A linha pontilhada é estimativa pontual para *Intercept* para os dados originais.
+Caracterização estimativa pontual de $\beta_0$ (*Intercept*) geradas por bootstrap paramétrico. A linha pontilhada é estimativa pontual de $\beta_0$ para os dados originais.
 :::
 ::: {#fig-glm-tempo-est layout-ncol=2}
 ```{r}
@@ -249,7 +293,7 @@ ggplot(
   geom_errorbar(aes(ymin = lq, ymax = uq), width = 0.2) +
   geom_hline(yintercept = modelo$coefficients[2], linetype = 'dotted')
 ```
-Caracterização da estimativa pontual de *tempo* geradas por bootstrap paramétrico. A linha pontilhada é a estimativa pontual de *tempo* para os dados originais.
+Caracterização da estimativa pontual de $\beta_1$ (*tempo*) geradas por bootstrap paramétrico. A linha pontilhada é a estimativa pontual de $\beta_1$ para os dados originais.
 :::
 
 ```{r}
@@ -304,7 +348,7 @@ ggplot(
 Caracterização da estatística do teste de *tempo* sob $H_0$ geradas por bootstrap paramétrico. A linha pontilhada é a estatística do teste para *tempo* nos dados originais.
 :::
 
-Pela @fig-hist-bs-tempo, notamos que a estatística do teste de $\beta_1$ com os dados originais ($z_0$) é bastante diferente dessa mesma estatística sob $H_0$. A @fig-ic-bs-tempo indica que o intervalo de confiança quantílico de 95% não inclui $z_0$. O p-valor, calculado como número de observações (geradas pelo bootstrap) da estatística sob $H_0$ que são maiores (em módulo) que $|z_0|$ dividos pelo número total de observações (5000), foi de 0.
+Pela @fig-hist-bs-tempo, notamos que a estatística do teste de $\beta_1$ com os dados originais ($z_0$) é bastante diferente dessa mesma estatística sob $H_0$. A @fig-ic-bs-tempo indica que o intervalo de confiança quantílico de 95% não inclui $z_0$. O p-valor, calculado como número de observações (geradas pelo bootstrap) da estatística sob $H_0$ que são maiores (em módulo) que $|z_0|$ dividos pelo número total de observações (5000), foi de 0. Logo, o teste de hipótese por bootstrap concordou com o resultado gerado pelo *summary* do modelo (teste de Wald).
 
 ## b)
 ```{r}
@@ -349,9 +393,12 @@ tribble(
 ```
 A @tbl-est-pontual-intercept indica que houve uma pequena diferença na estimação pontual do *Intercept* entre o método jackknife e os outros, enquanto que na @tbl-est-pontual-tempo, essa diferença foi bem menor.
 
+{{< pagebreak >}}
+
 # Questão IV
 ```{r}
-#| warning: false
+#| output: false
+#| echo: true
 dados <- data.frame(
   tempo = 1:12,
   nbac = c(175, 108, 95, 82, 71, 50, 49, 31, 28, 17, 16, 11)
@@ -370,31 +417,6 @@ fit <- stan(
   warmup = 1000,
   seed = 204256
 )
-
-betas_posteriori <-
-  rstan::extract(fit, pars = c("beta0", "beta1"), permuted = FALSE) %>%
-  as.data.frame() %>%
-  pivot_longer(
-    cols = everything(),#c('chain:1.beta0', 'chain:2.beta0', 'chain:3.beta0'),
-    names_to = 'provisorio',
-    values_to = 'valor'
-    #names_transform = function(nome) str_extract(nome, pattern = ':[123].') %>% str_extract('[123]')
-  ) %>%
-  mutate(
-    cadeia = sapply(provisorio, function(nome) str_extract(nome, pattern = ':[123].') %>% str_extract('[123]')),
-    beta = sapply(provisorio, function(nome) str_extract(nome, pattern = 'beta[01]')),
-    id = row_number()
-  ) %>%
-  select(-provisorio) %>%
-  pivot_wider(
-    names_from = beta,
-    values_from = valor
-  ) %>%
-  group_by(cadeia) %>%
-  reframe(
-    beta0 = beta0[!is.na(beta0)],
-    beta1 = beta1[!is.na(beta1)]
-  )
 
 betas_posteriori <-
   rstan::extract(fit, pars = c("beta0", "beta1"), permuted = FALSE) %>%
@@ -449,18 +471,34 @@ ggplot(
   geom_density() +
   facet_wrap(vars(beta), scale = 'free')
 ```
+
 ```{r}
 #| echo: false
-#| label: tbl-post-summaria
-#| fig-cap: Estatísticas sumárias das estimativas geradas.
+#| label: tbl-um
+#| tbl-cap: Estatísticas sumárias das estimativas geradas.
 summary(fit)[['summary']][1:2, ] %>% kable()
 ```
-Pelas @fig-post-line, @fig-post-hist e @fig-post-densidade, podemos ver que as três cadeias convergem. Pela @tbl-post-summaria, notamos que as estimativas pontuais dadas pelas médias são muito próximas das estimativas do modelo glm frequentista.
+Pelas @fig-post-line, @fig-post-hist e @fig-post-densidade, podemos ver que as três cadeias convergem. Pela @tbl-um, notamos que as estimativas pontuais dadas pelas médias são muito próximas das estimativas do modelo glm frequentista.
 
+{{< pagebreak >}}
 
+# Questão V
+Seja $F_n(t) = \frac{1}{n} \sum_{i = 1}^n \mathbb{1}_{(-\infty, t]}(X_i)$ e $X_i \sim F$.
 
+Assim,
 
+$$E[F_n(t)] =  \frac{1}{n} \sum_{i = 1}^n E[\mathbb{1}_{(-\infty, t]}(X_i)] \allowbreak
+= \frac{1}{n} \sum_{i = 1}^n P(X_i \leq t) \allowbreak
+= \frac{1}{n} \sum_{i = 1}^n F(t) \allowbreak
+= F(t)$$
 
+$$Var(F_n(t)) = Var\left(\frac{1}{n} \sum_{i = 1}^n \mathbb{1}_{(-\infty, t]}(X_i)\right) \allowbreak
+= \frac{1}{n^2} \sum_{i = 1}^n Var\left(\mathbb{1}_{(-\infty, t]}(X_i)\right) \allowbreak
+= \frac{1}{n^2} \sum_{i = 1}^n F(t) (1- F(t)) \allowbreak
+= \frac{1}{n} F(t) (1- F(t))$$
+
+Assim, pelo TCL:
+$$\sqrt(n) \frac{F_n(t) - F(t)}{ F(t) (1- F(t)} \xrightarrow{D} N(0, 1)$$
 
 
 
