@@ -1,0 +1,43 @@
+---
+title: "Trabalho 1"
+author: "Enzo Putton Tortelli de Souza"
+date: 25/09/2025
+format:
+  pdf:
+    geometry:
+      - top=15mm
+      - right=15mm
+      - left=15mm
+    titlepage: true
+      
+number-sections: true
+---
+
+```{r}
+#| echo: false
+library(tidyverse)
+
+theme_set(theme_classic())
+
+
+```
+
+```{r}
+set.seed(204256)
+```
+
+{{< include /lista_1/exercicio_7.qmd >}}
+
+{{< include /lista_1/exercicio_9.qmd >}}
+
+{{< include /lista_2/exercicio_4.qmd >}}
+
+{{< pagebreak >}}
+
+{{< include /lista_2/exercicio_6.qmd >}}
+
+# Questão 5
+
+![](/input/imagens/lista2/E5.jpg){height="90%"}
+
+Os códigos completos utilizados na geração desse trabalho podem ser verificados em <https://github.com/enzounicamp/ME524_2025S2>.

@@ -1,93 +1,85 @@
----
-format: pdf
----
-
-## Exercício 7
-
-### 7.d)
-
 ```{r}
+#| echo: false
 library(rmutil)
 library(ggplot2)
 library(dplyr)
 ```
 
+# Questão 1
+
+## Itens A e B
+
+![](/input/imagens/lista1/Exercicio7_1.jpg){width="50%"} ![](/input/imagens/lista1/Exercicio7_2.jpg){width="50%"}
+
+## Item C
+
+### Representação Estocástica
+
+Simular $p \sim Beta(\alpha, \beta)$ $\rightarrow$ guardar $Binomial(n, p)$; $\rightarrow$ voltar ao passo ao início.
+
+### Transformada Inversa
+
+Simular $u \sim U(0, 1)$ $\rightarrow$ encontrar $x \in \{0, \dots, m\}$ tq $F_X(x-1) < u \leq F_X(x)$ e guarda-lo $\rightarrow$ voltar ao início.
+
+### Método da Rejeição
+
+Simular $u \sim U(0, 1)$ $\rightarrow$ calcular $C = \max_x \frac{f(x)}{g(x)}$, onde $g(x) = \frac{1}{m}$ $\rightarrow$ simular $y \sim g$ $\rightarrow$ se $u < \frac{f(y)}{Cg(y)}$, guardar $y$, caso contrário, voltar ao início.
+
+## Item D
 
 ```{r}
 dbetabin <- function(x, m, a, b) {
   if(!(x %in% 0:m)) return(0)
   return(choose(m, x) * beta(x+a, m-x+b) / beta(a, b))
 }
-
 rbetabin_est <- function(n, m, a, b) {
   beta_vec <- rbeta(n, shape1 = a, shape2 = b)
   result <- sapply(beta_vec, function(p) {
     rbinom(1, m, p)
   })
-  
   return(result)
 }
-
 rbetabin_mti <- function(n, m, a, b) {
-  unif_vec <- runif(n)
-  
-  result <- integer(n)
-  
+  unif_vec <- runif(n); result <- integer(n)
   for(i in seq_along(unif_vec)) {
-    p <- dbetabin(0, m, a, b)
-    x <- 0
-    
+    p <- dbetabin(0, m, a, b); x <- 0
     while(p < unif_vec[i]) {
-      x <- x + 1
-      p <- p + dbetabin(x, m, a, b)
-      if(unif_vec[i] <= p) {
-        result[i] <- x
-        break
-      }
+      x <- x + 1; p <- p + dbetabin(x, m, a, b)
+      if(unif_vec[i] <= p) {result[i] <- x
+      break}
     }
-    
     result[i] <- x
   }
-  
   return(result)
 }
-
 rbetabin_rej <- function(n, m, a, b) {
   result <- integer(n)
-
   C <- max(sapply(
     0:m,
     function(x) {
       dbetabin(x, m, a, b) * (m + 1)
     }
   )) # usando a densidade unif discreta como g
-  
   divisor <- C / (m + 1)
-  
   # não precisamos simular 
-  
   for(i in seq_along(result)) {
-    u <- runif(1)
-    y <- sample(0:m, 1)
+    u <- runif(1); y <- sample(0:m, 1)
     while(u > dbetabin(y, m, a, b) / divisor) y <- sample(0:m, 1)
     result[i] <- y
   }
-  
   return(result)
 }
 ```
 
 ```{r}
-
-n <- 5000
-m <- 5
-a <- 2
-b <- 3
+#| echo: false
+#| layout-ncol: 2
+n <- 5000; m <- 5; a <- 2; b <- 3
 
 DADOS <-
   rbind(
     data.frame(
-      Método = 'Est',
+      Método = 'Estocástico',
       Valor = rbetabin_est(n, m, a, b)
     ),
     data.frame(
@@ -95,30 +87,52 @@ DADOS <-
       Valor = rbetabin_mti(n, m, a, b)
     ),
     data.frame(
-      Método = 'Rej',
+      Método = 'Rejeição',
       Valor = rbetabin_rej(n, m, a, b)
     ),
     data.frame(
       Método = 'R',
       Valor = rbetabinom(n, size = m, m = a/(a+b), s = a+b)
     )
+  )%>%
+  mutate(
+    Método = as.factor(Método)
+  ) %>% 
+  group_by(Método) %>%
+  mutate(
+    media = {
+      result <- numeric(n)
+      
+      for(i in 1:n) {
+        result[i] <- mean(Valor[1:i])
+      }
+      
+      result
+    },
+    variancia = {
+      result <- numeric(n)
+      
+      for(i in 1:n) {
+        result[i] <- mean(Valor[1:i])
+      }
+      
+      result
+    }
   )
-
 
 ggplot(DADOS, aes(x = Valor, fill = Método)) +
   geom_bar(position = 'dodge')
 
-ggplot(
-  data.frame(
-    x = 0:m,
-    y = sapply(0:m, dbetabin, m = m, a = a, b = b)
-  ),
-  aes(x = x, y = y)
-) +
-  geom_point() +
-  geom_line() +
-  geom_hline(yintercept = divisor)
+ggplot(DADOS, aes(y = Valor)) +
+  geom_boxplot() +
+  facet_wrap(vars(Método))
+
+ggplot(DADOS,
+       aes(y = media, x = rep(1:n, 4), color = Método)) +
+  geom_line()
+
+ggplot(DADOS,
+       aes(y = variancia, x = rep(1:n, 4), color = Método)) +
+  geom_line()
 
 ```
-
-

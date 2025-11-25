@@ -1,21 +1,47 @@
-
+# Questão 2
 ```{r}
+#| echo: false
 library(tsallisqexp)
 library(tidyverse)
 ```
 
+## Itens A e B
+
+![](/input/imagens/lista1/Exercicio9_1.jpg){height="90%"}
+
+![](/input/imagens/lista1/Exercicio9_2.jpg){width="50%"} ![](/input/imagens/lista1/Exercicio9_3.jpg){width="50%"}
+
+## Item C
+
+### Método da Transformada Inversa
+
+Como não consegui calcular a inversa analítca da acumulada da densidade proposta, utilizei de métodos computacionais.
+
+1.  Gere uma amostra de uma $U(0, 1)$;
+
+2.  Ache a solução de $F_X(x) - u = 0$, onde $F_X$ é a fda de $X$;
+
+3.  Volte ao passo 1.
+
+## Item D
+
 ```{r}
 rtsal_mti <- function(n, lambda, q) {
-  unif_vec <- runif(n)
-  result <- integer(n)
-  
+  unif_vec <- runif(n); result <- integer(n)
   for(i in seq_along(unif_vec)) {
-    result[i] <- uniroot(function(x) {ptsal(x, kappa = lambda, q = q) - unif_vec[i]}, interval = c(0, 10000))$root
+    result[i] <- uniroot(function(x) {
+      ptsal(x, kappa = lambda, q = q) - unif_vec[i]},
+      interval = c(0, 10000))$root
   }
-  
   return(result)
 }
 
+```
+
+
+```{r}
+#| echo: false
+#| layout-ncol: 2
 n <- 5000
 lambda <- 2
 q <- 1.2
@@ -33,6 +59,27 @@ dados <-
   ) %>%
   mutate(
     Método = as.factor(Método)
+  ) %>% 
+  group_by(Método) %>%
+  mutate(
+    media = {
+      result <- numeric(n)
+
+      for(i in 1:n) {
+        result[i] <- mean(Valor[1:i])
+      }
+      
+      result
+      },
+    variancia = {
+      result <- numeric(n)
+
+      for(i in 1:n) {
+        result[i] <- mean(Valor[1:i])
+      }
+      
+      result
+    }
   )
 
 ggplot(
@@ -55,6 +102,13 @@ ggplot(
   geom_qq(distribution = qtsal, dparams = list(kappa = lambda, q = q)) +
   geom_qq_line(distribution = qtsal, dparams = list(kappa = lambda, q = q)) +
   facet_wrap(vars(Método))
+
+ggplot(dados,
+       aes(y = media, x = rep(1:n, 2), color = Método)) +
+  geom_line()
+
+ggplot(dados,
+       aes(y = variancia, x = rep(1:n, 2), color = Método)) +
+  geom_line()
+
 ```
-
-
