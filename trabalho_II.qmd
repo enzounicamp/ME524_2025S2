@@ -1,36 +1,92 @@
 ---
+format: 
+    typst:
+      papersize: a4
+      margin:
+        x: 3cm
 
 ---
 
 ```{r}
+#| include: false
 library(MASS)
 library(mvtnorm)
 library(tidyverse)
 library(maxLik)
 library(VGAM)
 library(knitr)
+library(rstan)
 ```
 
 ```{r}
+#| include: false
 set_theme(theme_bw())
+geom_histogram <- function(...) ggplot2::geom_histogram(color = 'black', fill = 'gray', ...)
+options(digits = 4)
 ```
 
 
 ```{r}
-n <- 5000
 set.seed(204256)
 ```
 
 
 
 # Exercício I
+## a)
+$$
+L(\alpha, \beta| \textbf{x}) = (2\sqrt{2\pi}\alpha \beta)^{-n} \exp\left\{-\frac{1}{2\alpha^2}[\sum_{i = 1}^n(\frac{x_i}{\beta} + \frac{\beta}{x_i}) -2n]\right\} \prod_{i =1}^n\left[\left(\frac{\beta}{x_i}\right)^{\frac{1}{2}} + \left(\frac{x_i}{\beta}\right)^{\frac{3}{2}}\right]
+$$
+$$
+l(\alpha, \beta| \textbf{x}) = -n\log(2\sqrt{2\pi}\alpha \beta) -\frac{1}{2\alpha^2}\left[\sum_{i = 1}^n(\frac{x_i}{\beta} + \frac{\beta}{x_i}) -2n\right] + \sum_{i =1}^n\log\left(\left(\frac{\beta}{x_i}\right)^{\frac{1}{2}} + \left(\frac{x_i}{\beta}\right)^{\frac{3}{2}}\right)
+$$
+$$
+\frac{dl}{d\alpha} = \frac{-n}{\alpha} + \alpha^{-3}\left(\beta^{-1}\sum x_i + \beta \sum x_i^{-1}\right)
+$$
+
+$$
+\frac{dl}{d\beta}
+= -n\beta^{-1}
+ - \frac{1}{2}\alpha^{-2}\left(
+     -\beta^{-2} \sum x_i + \sum x_i^{-1}
+   \right)
+ + \sum \left(\frac{
+     \tfrac{1}{2} (x_i\beta)^{-1/2} + \tfrac{3}{2} \beta^{1/2} x_i^{-3/2}
+   }{
+     (x_i^{-1}\beta)^{1/2} + (x_i^{-1}\beta)^{3/2}
+   }
+  \right) 
+$$
+$$
+\frac{d^2l}{d\alpha^2} = \frac{n}{\alpha^2} - 3\alpha^{-3}\left(\beta^{-1}\sum x_i + \beta \sum x_i^{-1}\right)
+$$
+
+$$
+\frac{d^2l}{d\beta d \alpha} = \alpha^{-3}\left(-\beta^{-2}\sum x_i + \sum x_i^{-1}\right)
+$$
+$$
+\frac{d^2l}{d\alpha d \beta} = \alpha^{-3}\left(-\beta^{-2}\sum x_i + \sum x_i^{-1}\right)
+$$
+$$
+\frac{d^2l}{d\beta^2} = ???
+$$
+
+$$
+S(\alpha, \beta) = \left[\begin{array}{c} \frac{dl}{d\alpha} \\ \frac{dl}{d\beta} \end{array}\right]
+$$
+$$
+H(\alpha, \beta) \left[\begin{array}{cc} \frac{d^2l}{d\alpha^2} & \frac{d^2l}{d\beta d \alpha} \\ \frac{d^2l}{d\alpha d\beta} & \frac{d^2l}{d\beta^2} \end{array}\right]
+$$
+$$
+I(\alpha, \beta) \left[\begin{array}{cc} E\left[\frac{d^2l}{d\alpha^2}\right] & E\left[\frac{d^2l}{d\beta d \alpha}\right] \\ E\left[\frac{d^2l}{d\alpha d\beta}\right] & E\left[\frac{d^2l}{d\beta^2}\right] \end{array}\right]
+$$
 
 ## b)
 
 Para simular uma amostra aleatória de uma t de Student, podemos gerar uma normal multivariada e uma qui-quadrado univariada, independentes entre si e aleatórias, fazer a primeira vezes a raiz dos graus de liberdade da segunda, dividida pela raiz da segunda e somar o parâmetro de locação da primeira. Para uma amostra de tamanho $n$, basta repetir esse processo $n$ vezes.
 
 ```{r}
-mu <- c(1, -2); df <- 4; sigma <- matrix(c(3, 1.3, 1.3, 1), ncol = 2)
+n <- 5000; mu <- c(1, -2); df <- 4; sigma <- matrix(c(3, 1.3, 1.3, 1), ncol = 2)
 normal <- MASS::mvrnorm(n = n, mu = mu, Sigma = sigma)
 quiquadr <- rchisq(n = n, df = df)
 t_student <- normal/sqrt(quiquadr/df) + mu
@@ -47,17 +103,19 @@ ggplot() +
 ggplot(
   t_student,
   aes(x = V1)
-  ) +
+) +
   geom_density(aes(color = 'Simulado')) +
   geom_function(aes(color = 't-Student'), fun = dt, args = list(df = df, ncp = 3))
 
 ggplot(
   t_student,
   aes(x = V2)
-  ) +
+) +
   geom_density(aes(color = 'Simulado')) +
   geom_function(aes(color = 't-Student'), fun = dt, args = list(df = df, ncp = 1))
 ```
+
+p.s. eu sei que a simulação está errada, mas não faço ideia do porque.
 
 # Questão II
 ```{r}
@@ -69,6 +127,7 @@ logver <- function(x, a, b) {
 }
 logver_amostra <- function(param, neg = F) logver(amostra, param[1], param[2]) * (-1)^neg
 ```
+
 ```{r}
 nr <- maxLik(logLik = logver_amostra, start = start, method = 'NR')
 bfgs <- maxLik(logLik = logver_amostra, start = start, method = 'BFGS')
@@ -77,13 +136,16 @@ nm <- maxLik(logLik = logver_amostra, start = start, method = 'NM')
 ```
 
 ```{r}
+#| echo: false
+#| fig-cap: Histograma da amostra (n = 100) gerada aleatóriamente de uma distribuição de Birnbaum-Saunders com parâmetros $\alpha = 3$ e $\beta = 0.8$.
 ggplot(amostra %>% as.data.frame %>% rename_with(function(x) 'Amostra'),
        aes(x = Amostra)) +
-  geom_histogram(bins = 15, fill = 'red', alpha = 0.7, color = 'red')
+  geom_histogram(bins = 15)
 ```
 
 
 ```{r}
+#| echo: false
 #| label: tbl-q2-resultados
 #| tbl-cap: Resultado da otimização da função de log-verossimilhança para cada tipo de método de otimização.
 tribble(
@@ -94,5 +156,314 @@ tribble(
   'NM', nm$estimate, nm$maximum, nm$iterations,
 ) %>% kable()
 ```
-Pela @tbl-q2-resultados, notamos que todos os métodos convergiram para os mesmos valores. O método NR foi o que convergiu com menos iterações, enquanto o NM, o que convergiu com mais. Além disso, o BFGS levou quase o dobro do número de iterações do L-BFGS-B. Dado o que aprendemos sobre a performce de cada um desses métodos, todos esses resultados são esperados.
+Pela @tbl-q2-resultados, notamos que todos os métodos convergiram para os mesmos valores. O método NR foi o que convergiu com menos iterações, enquanto o NM, o que convergiu com mais. Além disso, o BFGS levou quase o dobro do número de iterações do L-BFGS-B. Dado o que aprendemos sobre a performce de cada um desses métodos, todos esses resultados são esperados. As funções utilizadas não deram *warning* em nenhum momento.
+
+
+# Questão III
+
+```{r}
+dados <- data.frame(
+  tempo = 1:12,
+  nbac = c(175, 108, 95, 82, 71, 50, 49, 31, 28, 17, 16, 11)
+)
+
+modelo <- glm(nbac ~ tempo, family = poisson(), data = dados)
+summ_modelo <- summary(modelo)
+estatistica_teste <- summ_modelo[['coefficients']][, 3]
+
+```
+
+## a)
+```{r}
+B <- 5000;
+rpois_modelo <- function(n, modelo) {
+  mu_vec <- model.matrix(modelo) %*% modelo$coefficients |> exp()
+  sapply(mu_vec, function(lambda) rpois(n, lambda))
+}
+
+reamostra_nbac <- rpois_modelo(B, modelo)
+
+bs_betas <-
+  apply(reamostra_nbac, MARGIN = 1, simplify = TRUE, FUN = function(Y) {
+    tempo <- 1:12
+    modelo <- glm(Y ~ tempo, family = poisson())
+    return(modelo$coefficients)
+  }) |>
+  t() |>
+  as.data.frame()
+```
+
+::: {#fig-glm-intercepto-est layout-ncol=2}
+```{r}
+#| echo: false
+#| label: fig-hist-bs-intercept-est
+#| fig-cap: Histograma.
+ggplot(
+  bs_betas,
+  aes(x = `(Intercept)`)
+) +
+  geom_histogram() +
+  geom_vline(xintercept = modelo$coefficients[1], linetype = 'dotted', linewidth = 0.9)
+
+```
+
+```{r}
+#| echo: false
+#| label: fig-ic-bs-intercept-est
+#| fig-cap: Intervalo de confiança quantílico $(2.5\%; 97.5\%)$.
+ggplot(
+  bs_betas %>%
+    mutate(lq = quantile(`(Intercept)`, probs = 0.025),
+           uq = quantile(`(Intercept)`, probs = 0.975)),
+  aes(y = `(Intercept)`, x = 'IC Quantílico (2,5%; 97,5%)')
+) +
+  geom_errorbar(aes(ymin = lq, ymax = uq), width = 0.2) +
+  geom_hline(yintercept = modelo$coefficients[1])
+```
+
+Caracterização estimativa pontual de *Intercept* geradas por bootstrap paramétrico. A linha pontilhada é estimativa pontual para *Intercept* para os dados originais.
+:::
+::: {#fig-glm-tempo-est layout-ncol=2}
+```{r}
+#| echo: false
+#| label: fig-hist-bs-tempo-est
+#| fig-cap: Histograma
+ggplot(
+  bs_betas,
+  aes(x = tempo)
+) +
+  geom_histogram() +
+  geom_vline(xintercept = modelo$coefficients[2], linetype = 'dotted', linewidth = 0.9)
+```
+
+```{r}
+#| echo: false
+#| label: fig-ic-bs-tempo-est
+#| fig-cap: Intervalo de confiança quantílico $(2.5\%; 97.5\%)$.
+ggplot(
+  bs_betas %>%
+    mutate(lq = quantile(tempo, probs = 0.025),
+           uq = quantile(tempo, probs = 0.975)),
+  aes(y = tempo, x = 'IC Quantílico (2,5%; 97,5%)')
+) +
+  geom_errorbar(aes(ymin = lq, ymax = uq), width = 0.2) +
+  geom_hline(yintercept = modelo$coefficients[2], linetype = 'dotted')
+```
+Caracterização da estimativa pontual de *tempo* geradas por bootstrap paramétrico. A linha pontilhada é a estimativa pontual de *tempo* para os dados originais.
+:::
+
+```{r}
+rpois_modelo_h0 <- function(n, modelo) {
+  mu_vec <- model.matrix(modelo)[, -2] * modelo$coefficients[-2] |> exp()
+  sapply(mu_vec, function(lambda) rpois(n, lambda))
+}
+
+reamostra_nbac_h0 <- rpois_modelo_h0(B, modelo)
+
+bs_estatistica_teste <-
+  apply(reamostra_nbac_h0, MARGIN = 1, simplify = TRUE, FUN = function(Y) {
+    tempo <- 1:12
+    modelo <- glm(Y ~ tempo, family = poisson())
+    return(summary(modelo)[['coefficients']][, 3])
+  }) |>
+  t() |>
+  as.data.frame()
+
+p_valor <- mean(abs(bs_estatistica_teste$tempo) > abs(estatistica_teste[2]))
+
+```
+
+::: {#fig-glm-tempo layout-ncol=2}
+```{r}
+#| echo: false
+#| label: fig-hist-bs-tempo
+#| fig-cap: Histograma
+ggplot(
+  bs_estatistica_teste,
+  aes(x = tempo)
+) +
+  geom_histogram() +
+  geom_vline(xintercept = estatistica_teste[2], linetype = 'dotted', linewidth = 0.9) +
+  labs(x = 'Estatística do teste para beta1')
+```
+
+```{r}
+#| echo: false
+#| label: fig-ic-bs-tempo
+#| fig-cap: Intervalo de confiança quantílico $(2.5\%; 97.5\%)$.
+ggplot(
+  bs_estatistica_teste %>%
+    mutate(lq = quantile(tempo, probs = 0.025),
+           uq = quantile(tempo, probs = 0.975)),
+  aes(y = tempo, x = 'IC Quantílico (2,5%; 97,5%)')
+) +
+  geom_errorbar(aes(ymin = lq, ymax = uq), width = 0.2) +
+  geom_hline(yintercept = estatistica_teste[2], linetype = 'dotted') +
+  labs(y = 'Estatística do teste para beta1')
+```
+Caracterização da estatística do teste de *tempo* sob $H_0$ geradas por bootstrap paramétrico. A linha pontilhada é a estatística do teste para *tempo* nos dados originais.
+:::
+
+Pela @fig-hist-bs-tempo, notamos que a estatística do teste de $\beta_1$ com os dados originais ($z_0$) é bastante diferente dessa mesma estatística sob $H_0$. A @fig-ic-bs-tempo indica que o intervalo de confiança quantílico de 95% não inclui $z_0$. O p-valor, calculado como número de observações (geradas pelo bootstrap) da estatística sob $H_0$ que são maiores (em módulo) que $|z_0|$ dividos pelo número total de observações (5000), foi de 0.
+
+## b)
+```{r}
+jk_coef <- function(modelo) {
+  dados <- modelo$data
+  coeficientes <- matrix(nrow = nrow(dados), ncol = ncol(dados))
+  for(i in 1:nrow(dados)) {
+    dados_jk <- dados[-i, ]
+    modelo_jk <- glm(nbac ~ tempo, family = poisson(), data = dados_jk)
+    coeficientes[i, ] <- modelo_jk$coefficients
+  }
+  return(coeficientes)
+}
+
+coeficientes <- jk_coef(modelo)
+vies <- (nrow(modelo$data)-1) * (apply(coeficientes, MARGIN = 2, mean) - modelo$coefficients)
+coef_corrigidos <- modelo$coefficients - vies
+```
+
+```{r}
+#| label: tbl-est-pontual-intercept
+#| tbl-cap: Estimativa pontual e erro padrão de *Intercept*
+#| echo: false
+tribble(
+  ~Método, ~Intercept, ~`Erro padrão`,
+  'glm', summ_modelo$coefficients[1 ,1], summ_modelo$coefficients[1, 2],
+  'bootstrap', mean(bs_betas$`(Intercept)`), sd(bs_betas$`(Intercept)`)/nrow(bs_betas),
+  'jackknife', coef_corrigidos[1], sd(coeficientes[, 1])/nrow(coeficientes)
+) %>% kable()
+```
+
+```{r}
+#| label: tbl-est-pontual-tempo
+#| tbl-cap: Estimativa pontual e erro padrão de *tempo*
+#| echo: false
+tribble(
+  ~Método, ~tempo, ~`Erro padrão`,
+  'glm', summ_modelo$coefficients[2 ,1], summ_modelo$coefficients[2, 2],
+  'bootstrap', mean(bs_betas$tempo), sd(bs_betas$tempo)/nrow(bs_betas),
+  'jackknife', coef_corrigidos[2], sd(coeficientes[, 2])/nrow(coeficientes)
+) %>% kable()
+```
+A @tbl-est-pontual-intercept indica que houve uma pequena diferença na estimação pontual do *Intercept* entre o método jackknife e os outros, enquanto que na @tbl-est-pontual-tempo, essa diferença foi bem menor.
+
+# Questão IV
+```{r}
+#| warning: false
+dados <- data.frame(
+  tempo = 1:12,
+  nbac = c(175, 108, 95, 82, 71, 50, 49, 31, 28, 17, 16, 11)
+)
+
+fit <- stan(
+  file = file.path('input','glm_pois.stan'),
+  data = list(
+    N = nrow(dados),
+    y = dados$nbac,
+    t = dados$tempo,
+    dp_priori = 10
+  ),
+  chains = 3,
+  iter = 2000,
+  warmup = 1000,
+  seed = 204256
+)
+
+betas_posteriori <-
+  rstan::extract(fit, pars = c("beta0", "beta1"), permuted = FALSE) %>%
+  as.data.frame() %>%
+  pivot_longer(
+    cols = everything(),#c('chain:1.beta0', 'chain:2.beta0', 'chain:3.beta0'),
+    names_to = 'provisorio',
+    values_to = 'valor'
+    #names_transform = function(nome) str_extract(nome, pattern = ':[123].') %>% str_extract('[123]')
+  ) %>%
+  mutate(
+    cadeia = sapply(provisorio, function(nome) str_extract(nome, pattern = ':[123].') %>% str_extract('[123]')),
+    beta = sapply(provisorio, function(nome) str_extract(nome, pattern = 'beta[01]')),
+    id = row_number()
+  ) %>%
+  select(-provisorio) %>%
+  pivot_wider(
+    names_from = beta,
+    values_from = valor
+  ) %>%
+  group_by(cadeia) %>%
+  reframe(
+    beta0 = beta0[!is.na(beta0)],
+    beta1 = beta1[!is.na(beta1)]
+  )
+
+betas_posteriori <-
+  rstan::extract(fit, pars = c("beta0", "beta1"), permuted = FALSE) %>%
+  as.data.frame() %>%
+  pivot_longer(
+    cols = everything(),#c('chain:1.beta0', 'chain:2.beta0', 'chain:3.beta0'),
+    names_to = 'provisorio',
+    values_to = 'valor'
+    #names_transform = function(nome) str_extract(nome, pattern = ':[123].') %>% str_extract('[123]')
+  ) %>%
+  mutate(
+    cadeia = sapply(provisorio, function(nome) str_extract(nome, pattern = ':[123].') %>% str_extract('[123]')),
+    beta = sapply(provisorio, function(nome) str_extract(nome, pattern = 'beta[01]'))
+  ) %>%
+  select(-provisorio)
+  
+  
+```
+
+```{r}
+#| echo: false
+#| label: fig-post-line
+#| fig-cap: Traceplots das estimativas dos parâmetros.
+ggplot(
+  betas_posteriori,
+  aes(y = valor, colour = cadeia, x = 1:nrow(betas_posteriori))
+) +
+  geom_line() +
+  facet_wrap(vars(beta), scale = 'free')
+```
+
+```{r}
+#| echo: false
+#| label: fig-post-hist
+#| fig-cap: Histograma das estimativas dos parâmetros.
+ggplot(
+  betas_posteriori,
+  aes(x = valor)
+) +
+  geom_histogram() +
+  facet_wrap(vars(beta, cadeia), scale = 'free')
+```
+
+```{r}
+#| echo: false
+#| label: fig-post-densidade
+#| fig-cap: Densidade das estimativas dos parâmetros.
+ggplot(
+  betas_posteriori,
+  aes(x = valor, color = cadeia)
+) +
+  geom_density() +
+  facet_wrap(vars(beta), scale = 'free')
+```
+```{r}
+#| echo: false
+#| label: tbl-post-summaria
+#| fig-cap: Estatísticas sumárias das estimativas geradas.
+summary(fit)[['summary']][1:2, ] %>% kable()
+```
+Pelas @fig-post-line, @fig-post-hist e @fig-post-densidade, podemos ver que as três cadeias convergem. Pela @tbl-post-summaria, notamos que as estimativas pontuais dadas pelas médias são muito próximas das estimativas do modelo glm frequentista.
+
+
+
+
+
+
+
+
+
+
 
